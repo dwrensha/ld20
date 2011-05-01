@@ -30,12 +30,14 @@ import PhysicsTypes._
 sealed abstract class PlayState
 case object TitleScreen extends PlayState
 case object MainGame extends PlayState
+case object WinScreen extends PlayState
 
 
 class Physics extends PApplet {
 
     var playstate : PlayState = TitleScreen
 
+   val  rand = new scala.util.Random(System.currentTimeMillis())
     val titlescreen : PImage = loadImage("assets/titlescreen.png")
 
     val pi = 3.14159265f
@@ -105,13 +107,13 @@ class Physics extends PApplet {
     def makeBot(p: Vec2, v: Vec2, gl: Goal, theta:Float , omega: Float) : Int = {
       val sd: PolygonDef = new PolygonDef()
       sd.setAsBox(0.5f * BOTLONG, 0.5f * BOTWIDE)
-      sd.density = BOTDENSE
+      sd.density = 0.5f * BOTDENSE * ( 1f +  rand.nextFloat()  )
       sd.restitution = 0.0f
       sd.friction = 0.5f
 
       val bd: BodyDef = new BodyDef()
       bd.position.set(p)
-      bd.linearDamping = 0.1f
+      bd.linearDamping = 0.03f
       bd.angularDamping = 0.5f
       bd.angle = theta
       val body: Body = world.createBody(bd)
@@ -166,7 +168,7 @@ class Physics extends PApplet {
         world.setDebugDraw(dd)
     	
         dd.appendFlags(DebugDraw.e_shapeBit);
-        dd.setCamera(0.0f,0.0f, 3.0f);
+        dd.setCamera(0.0f,0.0f, 2.0f);
 
         // add some stuff to the world.
 
@@ -176,20 +178,27 @@ class Physics extends PApplet {
                 0.0f, 0.0f)
 
 
+      for(x <- Range(0,1000)  ){ //about the upper limit of what we can efficiently simulate
+        
+        makeBot(new Vec2(rand.nextFloat() * 200.0f - 100f,rand.nextFloat()* 200f - 100f),
+                new Vec2(rand.nextFloat(), rand.nextFloat()), 
+                (new Vec2(80.0f, 0.0f), 5.0f),
+                rand.nextFloat() * 10f, 0.0f)
+      }
 
+/*
       makeObstacle(new Vec2(-102.0f,-102.0f), 98.0f)
       makeObstacle(new Vec2(-102.0f,102.0f), 98.0f)
 
       makeObstacle(new Vec2(102.0f,-102.0f), 98.0f)
       makeObstacle(new Vec2(102.0f,102.0f), 98.0f)
-
+*/
 
 
 
 
       player.play()
       player.loop()
-      println("looping = " +  player.isLooping())
  
     }
     
@@ -207,13 +216,52 @@ class Physics extends PApplet {
           trackFPS()
         perhapsCreateBots()
 
-        var toRemove: List[BotID] = Nil
+
+
+
+
+        for((id,botinfo) <- livebots ){
+          val intent = intents.getOrElse(id,null)
+          val b = botinfo.body
+          val p = b.getPosition()
+          val theta = b.getAngle()
+          val v = b.getLinearVelocity()
+          val vmag = v.length()
+          val u = new Vec2(scala.math.cos(theta).asInstanceOf[Float], 
+                           scala.math.sin(theta).asInstanceOf[Float])
+          val _ = b.setLinearVelocity(u.mul(vmag))
+          val (t,a) = intent
+
+          t match {
+            case Some(TurnLeft) => 
+              b.applyTorque(MAXTORQUE)
+            case Some(TurnRight) => 
+              b.applyTorque(- MAXTORQUE)
+            case None => 
+              
+          }
+          a match {
+            case Some(Accel) => 
+              b.applyForce(u.mul(MAXFORCE), b.getPosition())
+            case Some(Brake) =>
+              if(Vec2.dot(v, u)  > 0){
+                b.applyForce(u.mul(- MAXBRAKE), b.getPosition())
+              } else {
+                b.setLinearVelocity(zerovec)
+              }
+            case None => 
+          }
+        }
+
+
         // draw it and step.
         background(0)
         world.step(1.0f / targetFPS, 8)
 
-
         dd.drawString(5, 30, "FPS: " + avgFPS ,new Color3f(255.0f,255.0f,255.0f))
+
+        case WinScreen => 
+          background(0)
       }
         return
     }
@@ -253,14 +301,14 @@ class Physics extends PApplet {
             (new Vec2(-2f,-90f), 5f),
             (new Vec2(-90f,2f), 5f))
 
-   val spawndelay = 120
+   val spawndelay = 60
 
    val ticks = Array(spawndelay, spawndelay, spawndelay, spawndelay)
 
 
           
 
-   val  rand = new scala.util.Random(System.currentTimeMillis())
+
 
     /**
      *  perhaps add bots to the world.
@@ -271,7 +319,7 @@ class Physics extends PApplet {
         if(ticks(i) > 0 ) {
           ticks.update(i,ticks(i) - 1)
         } else { 
-          if(rand.nextDouble < 0.01){
+          if(rand.nextDouble < 0.1){
             val spawn = spawnpoints(i)
             val v = spawnvels(i)
             val angle = spawnangles(i)
@@ -297,7 +345,9 @@ class Physics extends PApplet {
     override def keyPressed(e: java.awt.event.KeyEvent) = {
       playstate match {
         case TitleScreen => 
-          playstate = MainGame
+          if( keyCode == ENTER || key == ' ') {
+            playstate = MainGame
+          }
         case _ => 
           
       }
