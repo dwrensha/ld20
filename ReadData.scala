@@ -2,7 +2,9 @@ import scala.xml._
 import scala.collection.mutable.HashMap
 
 
-case class Coord(lat: Double, lon: Double)
+case class Coord(lat: Double, lon: Double) 
+
+
 case class Relation()
 
 object XmlUtil {
@@ -15,12 +17,42 @@ object XmlUtil {
   var maxlat: Double = 0D
   var maxlon: Double = 0D
 
+  var latscale = 1D
+  var lonscale = 1D
+
 
   val nodes : HashMap[ID, Coord] = new HashMap[Int,Coord]()
   val ways : HashMap[ID, List[ID]] = new HashMap[ID, List[ID]]()
   var citylimits : List[Coord] = Nil
 //  val rels : HashMap[ID, List[ID]]
 
+  var riverbanks : List[Coord] = Nil
+  
+//  var highways : List[List[Coord]] = Nil
+  var highways : List[Coord] = Nil
+
+  def printcoordlist(lst: List[Coord]) : Unit = {
+    for(Coord(lat,lon) <- lst) {
+      println(lon.toString + ",  " + lat.toString)
+    }
+  }
+
+  def printlistdelimited[A](printer : A => Unit, del : String, lst: List[A]) : Unit = lst match {
+    case Nil => ()
+    case x :: Nil => printer(x)
+    case x :: xs => 
+      printer(x)
+      print(del)
+      printlistdelimited(printer, del, xs)
+  }
+
+  def printwaylist(lsts: List[List[Coord]]) : Unit = {
+    for(lst <- lsts) {
+      printlistdelimited[Coord]( {case Coord(lat,lon)  => print("{" + lon + "," + lat + "}"  )  }   , ",", lst)
+      println()
+    }
+  }
+    
 
   def loadMap(filename: String, cityname: String) = {
     val data = XML.loadFile(filename)
@@ -34,8 +66,8 @@ object XmlUtil {
 
     for( n <- data \ "node") {
       val id = (n \ "@id").text.toInt
-      val lon = (n \ "@lon").text.toDouble
-      val lat = (n \ "@lat").text.toDouble
+      val lat = (n \ "@lat").text.toDouble - minlat
+      val lon = (n \ "@lon").text.toDouble - minlon
       nodes.put(id, Coord(lat,lon))
     }
 
@@ -56,7 +88,6 @@ object XmlUtil {
           println("this is the one")
           for(m <- ( r \ "member")){
             val memid = (m \ "@ref").text.toInt
-            println(m)
             ways.get(memid) match {
               case None => ()
               case Some(nds) => 
@@ -76,9 +107,52 @@ object XmlUtil {
       }
     }
 
-    println("city limits = ")
-    println(citylimits)
-    println("length = " + citylimits.length)
+    println("citylimits length = " + citylimits.length)
+
+    for (w <- (data \ "way")){
+      for (t <- (w \ "tag")){
+        if ((t \ "@k").text == "waterway" && (t \ "@v").text == "riverbank"){
+          for(nd <- ( w \ "nd")){
+            val ndid = (nd \ "@ref").text.toInt
+            nodes.get(ndid) match {
+              case None => ()
+              case Some(crd) => riverbanks = crd::riverbanks
+            }
+            
+            
+          }
+        }
+        
+      }
+    }
+
+    println("riverbanks length = " + citylimits.length)
+
+
+
+    for (w <- (data \ "way")){
+      for (t <- (w \ "tag")){
+        if ((t \ "@k").text == "highway" && 
+            (  (t \ "@v").text == "primary" || (t \ "@v").text == "secondary"  || (t \ "@v").text == "tertiary"  )
+          ) {
+//          var thisway: List[Coord] = Nil
+          for(nd <- ( w \ "nd")){
+            val ndid = (nd \ "@ref").text.toInt
+            nodes.get(ndid) match {
+              case None => ()
+//              case Some(crd) => thisway = crd::thisway 
+              case Some(crd) => highways = crd::highways 
+            }
+//            highways = thisway::highways
+            
+            
+          }
+        }
+        
+      }
+    }
+
+    println("highways length = " + highways.length)
 
 
   }
@@ -101,6 +175,11 @@ object XmlUtil {
     println("loading data.")
     loadMap(args(0), args(1))
     
+//    printcoordlist(citylimits)
+//    printcoordlist(riverbanks)
+//    printcoordlist(nodes.values.toList)
+     printcoordlist(highways)
+
   }
 
 }
