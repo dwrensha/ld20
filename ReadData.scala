@@ -33,7 +33,7 @@ object XmlUtil {
 
   def printcoordlist(lst: List[Coord]) : Unit = {
     for(Coord(lat,lon) <- lst) {
-      println(lon.toString + ",  " + lat.toString)
+      println(lon.toString + "," + lat.toString)
     }
   }
 
