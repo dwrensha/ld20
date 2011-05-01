@@ -27,10 +27,16 @@ import PhysicsTypes._
 
 
 
-
+sealed abstract class PlayState
+case object TitleScreen extends PlayState
+case object MainGame extends PlayState
 
 
 class Physics extends PApplet {
+
+    var playstate : PlayState = TitleScreen
+
+    val titlescreen : PImage = loadImage("assets/titlescreen.png")
 
     val pi = 3.14159265f
     val zerovec = new Vec2(0f,0f)
@@ -79,6 +85,8 @@ class Physics extends PApplet {
   // conservatively estimate the polling cycle as half the frame time.
   val EPS = 1f / (2f * targetFPS) 
 
+  val minim : Minim = new Minim(this)
+  val player : AudioPlayer = minim.loadFile("assets/title.mp3")
 
 
   def trackFPS() = {
@@ -177,10 +185,11 @@ class Physics extends PApplet {
 
 
 
-      val minim : Minim = new Minim(this)
-      val player : AudioPlayer = minim.loadFile("assets/title.mp3")
+
+
       player.play()
-      
+      player.loop()
+      println("looping = " +  player.isLooping())
  
     }
     
@@ -189,17 +198,24 @@ class Physics extends PApplet {
      * and is called targetFPS times per second.
      */
     override def draw() {
-        trackFPS()
+      playstate match {
+        case TitleScreen => 
+          background(0)
+          image(titlescreen,0,0)
+        case MainGame => 
+
+          trackFPS()
         perhapsCreateBots()
 
         var toRemove: List[BotID] = Nil
-      // draw it and step.
-      background(0)
-      world.step(1.0f / targetFPS, 8)
+        // draw it and step.
+        background(0)
+        world.step(1.0f / targetFPS, 8)
 
 
-      dd.drawString(5, 30, "FPS: " + avgFPS ,new Color3f(255.0f,255.0f,255.0f))
-      return
+        dd.drawString(5, 30, "FPS: " + avgFPS ,new Color3f(255.0f,255.0f,255.0f))
+      }
+        return
     }
     
 
@@ -279,28 +295,21 @@ class Physics extends PApplet {
      * Do I have to worry about thread safety here?
   */ 
     override def keyPressed(e: java.awt.event.KeyEvent) = {
-      var (t,a) = intents.getOrElse(0,(None,None))
-      if(keyCode == UP) {
-           a = Some(Accel)
-      } else if(keyCode == DOWN) {
-           a = Some(Brake)
-      } else {
-        a = None
+      playstate match {
+        case TitleScreen => 
+          playstate = MainGame
+        case _ => 
+          
       }
-
-      if(keyCode == LEFT) {
-           t = Some(TurnLeft)
-      } else if(keyCode == RIGHT) {
-           t = Some(TurnRight)
-      } else {
-        t = None
-      }
-
-
-      intents.put(0,(t,a))
 
     }
 
 
+
+  override def stop() = {
+    player.close()
+    minim.stop()
+    super.stop()
+  }
 
 }
