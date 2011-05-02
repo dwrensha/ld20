@@ -62,7 +62,6 @@ class Physics extends PApplet {
     var world: World = null
 
 
-
     
     var livebots : HashMap[BotID, LiveBotInfo]  = 
       new HashMap[BotID,LiveBotInfo]()    
@@ -79,9 +78,9 @@ class Physics extends PApplet {
   val MAXBRAKE = 15.0f;
   val MAXTORQUE = 5.0f;
 
-  val BOTLONG = 1.5f;
-  val BOTWIDE = 1.0f;
-  val BOTDENSE = 5.0f;
+  val BOTLONG = 0.5f;
+  val BOTWIDE = 0.25f;
+  val BOTDENSE = 25.0f;
   val BOTMASS = BOTLONG * BOTWIDE * BOTDENSE;
 
   // conservatively estimate the polling cycle as half the frame time.
@@ -90,6 +89,10 @@ class Physics extends PApplet {
   val minim : Minim = new Minim(this)
   val player : AudioPlayer = minim.loadFile("assets/title.mp3")
 
+
+
+  val pittsburgh = ParseData.file("data/pittsburgh.dat")
+  println("read pittsburgh data. length = " + pittsburgh.length)
 
   def trackFPS() = {
     frameNum += 1
@@ -104,10 +107,10 @@ class Physics extends PApplet {
   }
 
 
-    def makeBot(p: Vec2, v: Vec2, gl: Goal, theta:Float , omega: Float) : Int = {
+    def makeBot(p: Vec2, v: Vec2,  theta:Float , omega: Float) : Int = {
       val sd: PolygonDef = new PolygonDef()
       sd.setAsBox(0.5f * BOTLONG, 0.5f * BOTWIDE)
-      sd.density = 0.5f * BOTDENSE * ( 1f +  rand.nextFloat()  )
+      sd.density = BOTDENSE 
       sd.restitution = 0.0f
       sd.friction = 0.5f
 
@@ -124,7 +127,6 @@ class Physics extends PApplet {
       
       val bid = nextBotID
       livebots.put(bid, new LiveBotInfo(body, 
-                                        gl,  
                                         System.currentTimeMillis()))
       intents.put(bid,(None,Some(Accel)))
        
@@ -174,10 +176,20 @@ class Physics extends PApplet {
 
         makeBot(new Vec2(0.0f,0.0f),
                 new Vec2(0.0f, 0.0f), 
-                (new Vec2(80.0f, 0.0f), 5.0f),
                 0.0f, 0.0f)
 
 
+      for((c1,c2) <- pittsburgh  ){
+        val (f1,f2) = (new java.lang.Float(8000d * c1.doubleValue), new java.lang.Float(8000d * c2.doubleValue))
+        println("making bot at " + c1 + " " + c2)
+        makeBot(new Vec2(f1.floatValue, f2.floatValue),
+                new Vec2(0f, 0f), 
+                pi, 0.0f)
+      }
+
+      println("bots done being made")
+
+/*
       for(x <- Range(0,1000)  ){ //about the upper limit of what we can efficiently simulate
         
         makeBot(new Vec2(rand.nextFloat() * 200.0f - 100f,rand.nextFloat()* 200f - 100f),
@@ -185,7 +197,7 @@ class Physics extends PApplet {
                 (new Vec2(80.0f, 0.0f), 5.0f),
                 rand.nextFloat() * 10f, 0.0f)
       }
-
+*/
 /*
       makeObstacle(new Vec2(-102.0f,-102.0f), 98.0f)
       makeObstacle(new Vec2(-102.0f,102.0f), 98.0f)
@@ -214,9 +226,6 @@ class Physics extends PApplet {
         case MainGame => 
 
           trackFPS()
-        perhapsCreateBots()
-
-
 
 
 
@@ -229,7 +238,7 @@ class Physics extends PApplet {
           val vmag = v.length()
           val u = new Vec2(scala.math.cos(theta).asInstanceOf[Float], 
                            scala.math.sin(theta).asInstanceOf[Float])
-          val _ = b.setLinearVelocity(u.mul(vmag))
+//          val _ = b.setLinearVelocity(u.mul(vmag))
           val (t,a) = intent
 
           t match {
@@ -309,31 +318,6 @@ class Physics extends PApplet {
           
 
 
-
-    /**
-     *  perhaps add bots to the world.
-     */ 
-    def perhapsCreateBots() : Unit = {
-
-      for(i <- ticks.indices){
-        if(ticks(i) > 0 ) {
-          ticks.update(i,ticks(i) - 1)
-        } else { 
-          if(rand.nextDouble < 0.1){
-            val spawn = spawnpoints(i)
-            val v = spawnvels(i)
-            val angle = spawnangles(i)
-            val gl = goals(i)
-            val omega = 0f;
-            val id = makeBot(spawn, v, gl, angle, omega )
-            ticks.update(i,spawndelay)
-          }
-        }
-      }
-
-
-      return();
-    }
 
 
 

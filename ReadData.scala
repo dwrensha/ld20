@@ -178,6 +178,7 @@ object XmlUtil {
 //    printcoordlist(citylimits)
 //    printcoordlist(riverbanks)
 //    printcoordlist(nodes.values.toList)
+//     println(minlon,minlat,maxlon,maxlat) 
      printcoordlist(highways)
 
   }
