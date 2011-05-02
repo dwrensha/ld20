@@ -95,22 +95,22 @@ class Physics extends PApplet {
 
 
 
-  val pittsburgh = ParseData.file("data/pittsburgh.dat")
+  val pittsburgh = ParseData.file("mydata/pittsburgh.dat")
   println("read pittsburgh data. length = " + pittsburgh.length)
 
-  val manhattan = ParseData.file("data/manhattan.dat")
+  val manhattan = ParseData.file("mydata/manhattan.dat")
   println("read manhattan data. length = " + manhattan.length)
 
-  val seattle = ParseData.file("data/seattle.dat")
+  val seattle = ParseData.file("mydata/seattle.dat")
   println("read seattle data. length = " + seattle.length)
 
-  val boston = ParseData.file("data/boston.dat")
+  val boston = ParseData.file("mydata/boston.dat")
   println("read boston data. length = " + boston.length)
 
-  val washington = ParseData.file("data/washington.dat")
+  val washington = ParseData.file("mydata/washington.dat")
   println("read washington data. length = " + washington.length)
 
-  val sanfrancisco = ParseData.file("data/sanfrancisco.dat")
+  val sanfrancisco = ParseData.file("mydata/sanfrancisco.dat")
   println("read sanfrancisco data. length = " + sanfrancisco.length)
 
   val cities =  Array(pittsburgh, manhattan, seattle, boston, washington,  sanfrancisco)

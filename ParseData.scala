@@ -18,7 +18,8 @@ object ParseData {
 
   def file(filename: String) : List[(Double,Double)] = {
     var res : List[(Double, Double)] = Nil
-    val in = new FileInputStream(filename)
+//    val in = new FileInputStream(filename)
+    val in = getClass().getResourceAsStream(filename)
     val br = new BufferedReader(new InputStreamReader(in))
     var ins1 = ""
     var ln = br.readLine()
@@ -27,8 +28,10 @@ object ParseData {
       ln = br.readLine()
     }
 
+    br.close()
     res
-    
+
+
   }
 
 }
