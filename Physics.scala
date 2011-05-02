@@ -35,6 +35,10 @@ case object WinScreen extends PlayState
 
 class Physics extends PApplet {
 
+    var pointstring: String = ""
+    var pointicks : Int = 0
+    val POINTICKSMAX : Int = 500
+
     var playstate : PlayState = TitleScreen
 
    val  rand = new scala.util.Random(System.currentTimeMillis())
@@ -76,7 +80,7 @@ class Physics extends PApplet {
 //    val maxomega = 5.0f;
   val MAXFORCE = 15.0f;
   val MAXBRAKE = 15.0f;
-  val MAXTORQUE = 5.0f;
+  val MAXTORQUE = 0.5f;
 
   val BOTLONG = 0.5f;
   val BOTWIDE = 0.25f;
@@ -109,6 +113,10 @@ class Physics extends PApplet {
   val sanfrancisco = ParseData.file("data/sanfrancisco.dat")
   println("read sanfrancisco data. length = " + sanfrancisco.length)
 
+  val cities =  Array(pittsburgh, manhattan, seattle, boston, washington,  sanfrancisco)
+
+  var controlledbots : List[BotID] = Nil
+
   def trackFPS() = {
     frameNum += 1
     if (frameNum == numFrames){
@@ -122,7 +130,7 @@ class Physics extends PApplet {
   }
 
 
-    def makeBot(p: Vec2, v: Vec2,  theta:Float , omega: Float) : Int = {
+    def makeBot(p: Vec2, v: Vec2,  theta:Float , omega: Float) : BotID = {
       val sd: PolygonDef = new PolygonDef()
       sd.setAsBox(0.5f * BOTLONG, 0.5f * BOTWIDE)
       sd.density = BOTDENSE 
@@ -189,26 +197,6 @@ class Physics extends PApplet {
 
         // add some stuff to the world.
 
-        makeBot(new Vec2(0.0f,0.0f),
-                new Vec2(0.0f, 0.0f), 
-                0.0f, 0.0f)
-
-
-      for((c1,c2) <- sanfrancisco  ){
-        val (f1,f2) = (new java.lang.Float(7000d * c1.doubleValue+50d), new java.lang.Float(7000d * c2.doubleValue-150d))
-        makeBot(new Vec2(f1.floatValue, f2.floatValue),
-                new Vec2(0f, 0f), 
-                3f * pi / 4f, 0.0f)
-      }
-
-      for((c1,c2) <- pittsburgh  ){
-        val (f1,f2) = (new java.lang.Float(7000d * c1.doubleValue - 250d), new java.lang.Float(7000d * c2.doubleValue+50d))
-        makeBot(new Vec2(f1.floatValue, f2.floatValue),
-                new Vec2(0f, 0f), 
-                - pi / 4f, 0.0f)
-      }
-
-      println("bots done being made")
 
 /*
       for(x <- Range(0,1000)  ){ //about the upper limit of what we can efficiently simulate
@@ -228,13 +216,53 @@ class Physics extends PApplet {
 */
 
 
-
+      startbattle
 
       player.play()
       player.loop()
  
     }
     
+
+
+  def startbattle : Unit = {
+    println("starting battle")
+    for((id,botinfo) <- livebots ){
+      val b = botinfo.body
+      world.destroyBody(b)
+      intents.remove(id)
+    }
+    livebots = new HashMap[BotID,LiveBotInfo]()    
+
+    val city1 = cities(rand.nextInt(cities.length)    )
+    val city2 = cities(rand.nextInt(cities.length))
+
+
+
+
+      for((c1,c2) <- city1  ){
+        val (f1,f2) = (new java.lang.Float(7000d * c1.doubleValue+50d), new java.lang.Float(7000d * c2.doubleValue-150d))
+        val id = makeBot(new Vec2(f1.floatValue, f2.floatValue),
+                         new Vec2(0f, 0f), 
+                         3f * pi / 4f, 0.0f)
+        controlledbots = id :: controlledbots
+        
+      }
+
+      for((c1,c2) <- city2  ){
+        val (f1,f2) = (new java.lang.Float(7000d * c1.doubleValue - 200d), new java.lang.Float(7000d * c2.doubleValue+0d))
+        makeBot(new Vec2(f1.floatValue, f2.floatValue),
+                new Vec2(0f, 0f), 
+                - pi / 4f, 0.0f)
+      }
+
+      println("bots done being made")
+
+
+    
+  }
+    
+
     /**
      * This is the main looping function,
      * and is called targetFPS times per second.
@@ -245,51 +273,56 @@ class Physics extends PApplet {
           background(0)
           image(titlescreen,0,0)
         case MainGame => 
+          this.synchronized{
+            trackFPS()
 
-          trackFPS()
 
 
-
-        for((id,botinfo) <- livebots ){
-          val intent = intents.getOrElse(id,null)
-          val b = botinfo.body
-          val p = b.getPosition()
-          val theta = b.getAngle()
-          val v = b.getLinearVelocity()
-          val vmag = v.length()
-          val u = new Vec2(scala.math.cos(theta).asInstanceOf[Float], 
-                           scala.math.sin(theta).asInstanceOf[Float])
-//          val _ = b.setLinearVelocity(u.mul(vmag))
-          val (t,a) = intent
-
-          t match {
-            case Some(TurnLeft) => 
-              b.applyTorque(MAXTORQUE)
-            case Some(TurnRight) => 
-              b.applyTorque(- MAXTORQUE)
-            case None => 
+            for((id,botinfo) <- livebots ){
+              val intent = intents.getOrElse(id,null)
+              val b = botinfo.body
+              val p = b.getPosition()
+              val theta = b.getAngle()
+              val v = b.getLinearVelocity()
+              val vmag = v.length()
+              val u = new Vec2(scala.math.cos(theta).asInstanceOf[Float], 
+                               scala.math.sin(theta).asInstanceOf[Float])
+              //          val _ = b.setLinearVelocity(u.mul(vmag))
+              val (t,a) = intent
               
-          }
-          a match {
-            case Some(Accel) => 
-              b.applyForce(u.mul(MAXFORCE), b.getPosition())
-            case Some(Brake) =>
-              if(Vec2.dot(v, u)  > 0){
-                b.applyForce(u.mul(- MAXBRAKE), b.getPosition())
-              } else {
-                b.setLinearVelocity(zerovec)
+              t match {
+                case Some(TurnLeft) => 
+                  b.applyTorque(MAXTORQUE)
+                case Some(TurnRight) => 
+                  b.applyTorque(- MAXTORQUE)
+                case None => 
+              
               }
-            case None => 
+              a match {
+                case Some(Accel) => 
+                  b.applyForce(u.mul(MAXFORCE), b.getPosition())
+                case Some(Brake) =>
+                  if(Vec2.dot(v, u)  > 0){
+                    b.applyForce(u.mul(- MAXBRAKE), b.getPosition())
+                  } else {
+                    b.setLinearVelocity(zerovec)
+                  }
+                case None => 
+              }
+            }
+
+
+            // draw it and step.
+            background(0)
+            world.step(1.0f / targetFPS, 8)
+
+            dd.drawString(370, 30, pointstring,new Color3f(255.0f,0f,0f))
+            pointicks += 1
+            if(pointicks > POINTICKSMAX){
+              pointstring = ""
+              pointicks = 0
+            }
           }
-        }
-
-
-        // draw it and step.
-        background(0)
-        world.step(1.0f / targetFPS, 8)
-
-        dd.drawString(5, 30, "FPS: " + avgFPS ,new Color3f(255.0f,255.0f,255.0f))
-
         case WinScreen => 
           background(0)
       }
@@ -297,55 +330,10 @@ class Physics extends PApplet {
     }
     
 
-  /****2 ****
-   ****  ****
-   ****  ****
-            3
-   1
-   ****  ****
-   ****  ****
-   **** 0****
-  */
-    val spawnpoints = 
-      Array(new Vec2(2f,-90f),
-            new Vec2(-90f,-2f),
-            new Vec2(-2f,90f),
-            new Vec2(90f,2f))
 
-    val spawnvels = 
-      Array(new Vec2(0f,5f),
-            new Vec2(5f,0f),
-            new Vec2(0f,-5f),
-            new Vec2(-5f,0f))
-
-    val spawnangles = 
-      Array(pi / 2.0f,
-            0f,
-            3f * pi / 2f,
-            pi
-      )
-
-    val goals = 
-      Array((new Vec2(2f,90f), 5.0f),
-            (new Vec2(90f,-2f), 5f),
-            (new Vec2(-2f,-90f), 5f),
-            (new Vec2(-90f,2f), 5f))
-
-   val spawndelay = 60
-
-   val ticks = Array(spawndelay, spawndelay, spawndelay, spawndelay)
-
-
-          
-
-
-
-
-
-
+  val DTHETA = 0.25f
 
     /*
-     * Do I have to worry about thread safety here?
   */ 
     override def keyPressed(e: java.awt.event.KeyEvent) = {
       playstate match {
@@ -353,6 +341,29 @@ class Physics extends PApplet {
           if( keyCode == ENTER || key == ' ') {
             playstate = MainGame
           }
+        case MainGame =>
+          if(keyCode == LEFT) {
+            val ni =Some(TurnLeft) 
+            for(id <- controlledbots){
+//              val botinfo = livebots.getOrElse(id,null)
+              val (t,a) = intents.getOrElse(id,null)
+              intents.put(id, (ni,a))
+            }
+          } else if (keyCode == RIGHT) {
+            val ni =  Some(TurnRight) 
+            for(id <- controlledbots){
+//              val botinfo = livebots.getOrElse(id,null)
+              val (t,a) = intents.getOrElse(id,null)
+              intents.put(id, (ni,a))
+            } 
+          }
+            else if (keyCode == ENTER ) {
+              this.synchronized{
+                val points = rand.nextInt(20) * 100
+                pointstring = " " + points + " POINTS!"
+                startbattle
+              }
+            } 
         case _ => 
           
       }
