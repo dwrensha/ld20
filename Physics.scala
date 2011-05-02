@@ -94,6 +94,21 @@ class Physics extends PApplet {
   val pittsburgh = ParseData.file("data/pittsburgh.dat")
   println("read pittsburgh data. length = " + pittsburgh.length)
 
+  val manhattan = ParseData.file("data/manhattan.dat")
+  println("read manhattan data. length = " + manhattan.length)
+
+  val seattle = ParseData.file("data/seattle.dat")
+  println("read seattle data. length = " + seattle.length)
+
+  val boston = ParseData.file("data/boston.dat")
+  println("read boston data. length = " + boston.length)
+
+  val washington = ParseData.file("data/washington.dat")
+  println("read washington data. length = " + washington.length)
+
+  val sanfrancisco = ParseData.file("data/sanfrancisco.dat")
+  println("read sanfrancisco data. length = " + sanfrancisco.length)
+
   def trackFPS() = {
     frameNum += 1
     if (frameNum == numFrames){
@@ -179,12 +194,18 @@ class Physics extends PApplet {
                 0.0f, 0.0f)
 
 
-      for((c1,c2) <- pittsburgh  ){
-        val (f1,f2) = (new java.lang.Float(8000d * c1.doubleValue), new java.lang.Float(8000d * c2.doubleValue))
-        println("making bot at " + c1 + " " + c2)
+      for((c1,c2) <- sanfrancisco  ){
+        val (f1,f2) = (new java.lang.Float(7000d * c1.doubleValue+50d), new java.lang.Float(7000d * c2.doubleValue-150d))
         makeBot(new Vec2(f1.floatValue, f2.floatValue),
                 new Vec2(0f, 0f), 
-                pi, 0.0f)
+                3f * pi / 4f, 0.0f)
+      }
+
+      for((c1,c2) <- pittsburgh  ){
+        val (f1,f2) = (new java.lang.Float(7000d * c1.doubleValue - 250d), new java.lang.Float(7000d * c2.doubleValue+50d))
+        makeBot(new Vec2(f1.floatValue, f2.floatValue),
+                new Vec2(0f, 0f), 
+                - pi / 4f, 0.0f)
       }
 
       println("bots done being made")
